@@ -1,27 +1,39 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <plugin xmlns="http://apache.org/cordova/ns/plugins/1.0" xmlns:android="http://schemas.android.com/apk/res/android" id="cordova-plugin-android-downloadmanager" version="0.5.0">
-  <name>cordova-plugin-android-downloadmanager</name>
-  <description>Plugin to expose Android's DownloadManager in Javascript</description>
-  <author email="github@tixz.dk">Emil Bay</author>
-  <keywords>cordova,android</keywords>
-  <license>ISC</license>
-  <repo>git+https://github.com/emilbayes/cordova-plugin-android-downloadmanager.git</repo>
-  <issue>https://github.com/emilbayes/cordova-plugin-android-downloadmanager/issues</issue>
-  <platform name="android">
-    <source-file src="src/com/github/emilbayes/downloadmanager/DownloadManagerPlugin.java" target-dir="src/com/github/emilbayes/downloadmanager"/>
-    <config-file target="res/xml/config.xml" parent="/*">
-      <feature name="DownloadManagerPlugin">
-        <param name="android-package" value="com.github.emilbayes.downloadmanager.DownloadManagerPlugin"/>
-        <param name="onload" value="true"/>
-      </feature>
-    </config-file>
-  </platform>
-  <platform name="ios">
-        <config-file target="config.xml" parent="/*">
-            <feature name="DownloadManagerPlugin">
-                <param name="ios-package" value="DownloadManagerPlugin" />
-            </feature>
-        </config-file>
-        <source-file src="src/ios/DownloadManagerPlugin.swift" />
-    </platform>
+   <name>cordova-plugin-android-downloadmanager</name>
+   <description>Plugin to expose Android's DownloadManager in Javascript</description>
+   <author email="github@tixz.dk">Emil Bay</author>
+   <keywords>cordova,android</keywords>
+   <license>ISC</license>
+   <repo>git+https://github.com/emilbayes/cordova-plugin-android-downloadmanager.git</repo>
+   <issue>https://github.com/emilbayes/cordova-plugin-android-downloadmanager/issues</issue>
+   <platform name="android">
+      <source-file src="src/com/github/emilbayes/downloadmanager/DownloadManagerPlugin.java" target-dir="src/com/github/emilbayes/downloadmanager" />
+      <config-file target="res/xml/config.xml" parent="/*">
+         <feature name="DownloadManagerPlugin">
+            <param name="android-package" value="com.github.emilbayes.downloadmanager.DownloadManagerPlugin" />
+            <param name="onload" value="true" />
+         </feature>
+      </config-file>
+   </platform>
+   <platform name="ios">
+      <config-file target="config.xml" parent="/*">
+         <feature name="DownloadManagerPlugin">
+            <param name="ios-package" value="DownloadManagerPlugin" />
+         </feature>
+      </config-file>
+      <source-file src="src/ios/DownloadManagerPlugin.swift" />
+      
+      <!-- <framework src="MZDownloadManager" type="podspec" spec="3.7.0"/> -->
+
+      <podspec>
+         <config>
+            <source url="https://github.com/mzeeshanid/MZDownloadManager.git" />
+         </config>
+         <pods use-frameworks="true">
+            <pod name="MZDownloadManager" spec="3.7.0" />
+         </pods>
+      </podspec>
+
+   </platform>
 </plugin>
