@@ -31,7 +31,7 @@
             <source url="https://github.com/mzeeshanid/MZDownloadManager.git" />
          </config>
          <pods use-frameworks="true">
-            <pod name="MZDownloadManager" spec="3.7.0" />
+            <pod name="MZDownloadManager" />
          </pods>
       </podspec>
 
