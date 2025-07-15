@@ -46,7 +46,22 @@ DownloadManager.prototype.remove = function(ids, cb) {
 
   exec('remove', ids, cb)
 }
-
+DownloadManager.prototype.addEventListener('downloadCancelled', function(event) {
+    if (self.eventListeners['downloadCancelled']) {
+      self.eventListeners['downloadCancelled'].forEach(function(listener) {
+        listener(event.detail)
+      })
+    }
+  })
+if (window.cordova && window.cordova.fireWindowEvent) {
+    DownloadManager.prototype.addEventListener('downloadCancelled', function(event) {
+      if (self.eventListeners['downloadCancelled']) {
+        self.eventListeners['downloadCancelled'].forEach(function(listener) {
+          listener(event.detail)
+        })
+      }
+    })
+  }
 DownloadManager.prototype.addCompletedDownload = function(req, cb) {
   exec('addCompletedDownload', [req], cb)
 }
