@@ -2,7 +2,60 @@ var assert = require('nanoassert')
 module.exports = new DownloadManager()
 
 function DownloadManager () {
+  // Initialize event listeners storage
+  this.eventListeners = {};
 }
+
+// Add proper event listener management
+DownloadManager.prototype.addEventListener = function(eventType, listener) {
+  if (!this.eventListeners[eventType]) {
+    this.eventListeners[eventType] = [];
+  }
+  this.eventListeners[eventType].push(listener);
+};
+
+DownloadManager.prototype.removeEventListener = function(eventType, listener) {
+  if (this.eventListeners[eventType]) {
+    const index = this.eventListeners[eventType].indexOf(listener);
+    if (index > -1) {
+      this.eventListeners[eventType].splice(index, 1);
+    }
+  }
+};
+
+// Initialize event handling when the plugin loads
+DownloadManager.prototype.init = function() {
+  const self = this;
+  
+  console.log('DownloadManager initializing event listeners...');
+  
+  // Set up document event listener for downloadCancelled
+  document.addEventListener('downloadCancelled', function(event) {
+    console.log('DownloadManager received downloadCancelled event:', event.detail);
+    if (self.eventListeners['downloadCancelled']) {
+      self.eventListeners['downloadCancelled'].forEach(function(listener) {
+        try {
+          listener(event.detail);
+        } catch (error) {
+          console.error('Error in downloadCancelled listener:', error);
+        }
+      });
+    }
+  });
+
+  // Fallback for cordova events
+  if (window.cordova) {
+    // Ensure cordova.fireWindowEvent exists
+    if (!window.cordova.fireWindowEvent) {
+      window.cordova.fireWindowEvent = function(eventName, data) {
+        console.log('Cordova fireWindowEvent called:', eventName, data);
+        document.dispatchEvent(new CustomEvent(eventName, { detail: data }));
+      };
+    }
+  }
+  
+  console.log('DownloadManager event listeners initialized');
+};
 
 DownloadManager.prototype.enqueue = function(req, cb) {
   if (typeof req === 'string') req = {uri: req}
@@ -46,22 +99,7 @@ DownloadManager.prototype.remove = function(ids, cb) {
 
   exec('remove', ids, cb)
 }
-DownloadManager.prototype.addEventListener('downloadCancelled', function(event) {
-    if (self.eventListeners['downloadCancelled']) {
-      self.eventListeners['downloadCancelled'].forEach(function(listener) {
-        listener(event.detail)
-      })
-    }
-  })
-if (window.cordova && window.cordova.fireWindowEvent) {
-    DownloadManager.prototype.addEventListener('downloadCancelled', function(event) {
-      if (self.eventListeners['downloadCancelled']) {
-        self.eventListeners['downloadCancelled'].forEach(function(listener) {
-          listener(event.detail)
-        })
-      }
-    })
-  }
+
 DownloadManager.prototype.addCompletedDownload = function(req, cb) {
   exec('addCompletedDownload', [req], cb)
 }
@@ -87,3 +125,15 @@ function exec (method, args, cb) {
 }
 
 function noop () {}
+
+// Auto-initialize when the plugin is loaded
+if (typeof document !== 'undefined') {
+  // Initialize after DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+      module.exports.init();
+    });
+  } else {
+    module.exports.init();
+  }
+}
