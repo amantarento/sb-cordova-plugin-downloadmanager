@@ -43,7 +43,8 @@ public class DownloadManagerPlugin extends CordovaPlugin {
      */
     public static final int DOWNLOADS_STATUS_PAUSED_BY_APP = 193;
     /**
-     * This download encountered some network error and is waiting before retrying the request.
+     * This download encountered some network error and is waiting before retrying
+     * the request.
      */
     public static final int DOWNLOADS_STATUS_WAITING_TO_RETRY = 194;
     /**
@@ -51,7 +52,8 @@ public class DownloadManagerPlugin extends CordovaPlugin {
      */
     public static final int DOWNLOADS_STATUS_WAITING_FOR_NETWORK = 195;
     /**
-     * This download exceeded a size limit for mobile networks and is waiting for a Wi-Fi
+     * This download exceeded a size limit for mobile networks and is waiting for a
+     * Wi-Fi
      * connection to proceed.
      */
     public static final int DOWNLOADS_STATUS_QUEUED_FOR_WIFI = 196;
@@ -106,7 +108,8 @@ public class DownloadManagerPlugin extends CordovaPlugin {
                 rowObject.put("title", cursor.getString(cursor.getColumnIndex(DownloadManager.COLUMN_TITLE)));
             }
             if (cursor.getColumnIndex(DownloadManager.COLUMN_DESCRIPTION) != -1) {
-                rowObject.put("description", cursor.getString(cursor.getColumnIndex(DownloadManager.COLUMN_DESCRIPTION)));
+                rowObject.put("description",
+                        cursor.getString(cursor.getColumnIndex(DownloadManager.COLUMN_DESCRIPTION)));
             }
             if (cursor.getColumnIndex(DownloadManager.COLUMN_MEDIA_TYPE) != -1) {
                 rowObject.put("mediaType", cursor.getString(cursor.getColumnIndex(DownloadManager.COLUMN_MEDIA_TYPE)));
@@ -139,7 +142,8 @@ public class DownloadManagerPlugin extends CordovaPlugin {
             }
             if (cursor.getColumnIndex(DownloadManager.COLUMN_STATUS) != -1) {
                 if (cursor.getColumnIndex(DOWNLOADS_COLUMN_LAST_MODIFICATION) != -1) {
-                    rowObject.put("status", translateStatus(cursor.getInt(cursor.getColumnIndex(DownloadManager.COLUMN_STATUS))));
+                    rowObject.put("status",
+                            translateStatus(cursor.getInt(cursor.getColumnIndex(DownloadManager.COLUMN_STATUS))));
                 } else {
                     rowObject.put("status", cursor.getInt(cursor.getColumnIndex(DownloadManager.COLUMN_STATUS)));
                 }
@@ -302,11 +306,14 @@ public class DownloadManagerPlugin extends CordovaPlugin {
         } catch (SQLiteException e) {
             e.printStackTrace();
 
-            // SELECT _id, _id, mediaprovider_uri, destination, title, description, uri, status, hint, media_type, total_size, last_modified_timestamp, bytes_so_far, allow_write, local_uri, reason
-            // FROM downloads WHERE ((uid=10175 OR otheruid=10175)) AND ((_id = ? ) AND deleted != '1') ORDER BY lastmod DESC
+            // SELECT _id, _id, mediaprovider_uri, destination, title, description, uri,
+            // status, hint, media_type, total_size, last_modified_timestamp, bytes_so_far,
+            // allow_write, local_uri, reason
+            // FROM downloads WHERE ((uid=10175 OR otheruid=10175)) AND ((_id = ? ) AND
+            // deleted != '1') ORDER BY lastmod DESC
 
             Uri uri = Uri.parse("content://downloads/my_downloads");
-            String[] projection = new String[]{
+            String[] projection = new String[] {
                     DownloadManager.COLUMN_ID,
                     DownloadManager.COLUMN_MEDIAPROVIDER_URI,
                     DownloadManager.COLUMN_TITLE,
@@ -319,16 +326,15 @@ public class DownloadManagerPlugin extends CordovaPlugin {
                     DOWNLOADS_COLUMN_CURRENT_BYTES
             };
             String selection = "(_id = ? ) AND deleted != '1'";
-            String[] selectionArgs = new String[]{
+            String[] selectionArgs = new String[] {
                     obj.optJSONArray("ids").getString(0)
             };
             String orderBy = "lastmod DESC";
 
-
             downloads = mResolver.query(uri, projection, selection, selectionArgs, orderBy);
         }
 
-        if(downloads.getCount() > 0) {
+        if (downloads.getCount() > 0) {
             callbackContext.success(JSONFromCursor(downloads));
         }
 
@@ -345,8 +351,29 @@ public class DownloadManagerPlugin extends CordovaPlugin {
         int removed = downloadManager.remove(ids);
         callbackContext.success(removed);
 
+        // 🔥 Fire JS event
+        try {
+            JSONObject event = new JSONObject();
+            event.put("status", "cancelled");
+            fireEvent("downloadCancelled", event); // <-- emit to JS
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
         return true;
     }
+
+  private void fireEvent(final String eventName, final JSONObject data) {
+    if (cordova != null && webView != null) {
+        cordova.getActivity().runOnUiThread(() -> {
+            final String js = String.format("cordova.fireWindowEvent('%s', %s);", eventName, data.toString());
+            webView.loadUrl("javascript:" + js);
+        });
+    } else {
+        Log.e("DownloadManagerPlugin", "webView or cordova is null, cannot fire event");
+    }
+}
+
 
     protected boolean addCompletedDownload(JSONObject obj, CallbackContext callbackContext) throws JSONException {
 
