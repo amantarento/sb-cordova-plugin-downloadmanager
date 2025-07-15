@@ -348,14 +348,46 @@ public class DownloadManagerPlugin extends CordovaPlugin {
     protected boolean remove(JSONArray arr, CallbackContext callbackContext) throws JSONException {
         long[] ids = longsFromJSON(arr);
 
+        // Store download info before removal for the event
+        JSONArray downloadInfoArray = new JSONArray();
+
+        // Query for download information before removing
+        for (long id : ids) {
+            DownloadManager.Query query = new DownloadManager.Query();
+            query.setFilterById(id);
+
+            try {
+                Cursor cursor = downloadManager.query(query);
+                if (cursor != null && cursor.moveToFirst()) {
+                    JSONObject downloadInfo = new JSONObject();
+                    downloadInfo.put("downloadId", id);
+                    if (cursor.getColumnIndex(DownloadManager.COLUMN_TITLE) != -1) {
+                        downloadInfo.put("title",
+                                cursor.getString(cursor.getColumnIndex(DownloadManager.COLUMN_TITLE)));
+                    }
+                    if (cursor.getColumnIndex(DownloadManager.COLUMN_STATUS) != -1) {
+                        downloadInfo.put("status", cursor.getInt(cursor.getColumnIndex(DownloadManager.COLUMN_STATUS)));
+                    }
+                    downloadInfoArray.put(downloadInfo);
+                }
+                if (cursor != null) {
+                    cursor.close();
+                }
+            } catch (Exception e) {
+                Log.e("DownloadManagerPlugin", "Error querying download info: " + e.getMessage());
+            }
+        }
+
         int removed = downloadManager.remove(ids);
         callbackContext.success(removed);
 
-        // 🔥 Fire JS event
+        // Fire JS event with download information
         try {
             JSONObject event = new JSONObject();
             event.put("status", "cancelled");
-            fireEvent("downloadCancelled", event); // <-- emit to JS
+            event.put("removedCount", removed);
+            event.put("downloads", downloadInfoArray);
+            fireEvent("downloadCancelled", event);
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -363,18 +395,29 @@ public class DownloadManagerPlugin extends CordovaPlugin {
         return true;
     }
 
-  private void fireEvent(final String eventName, final JSONObject data) {
+  
+    private void fireEvent(final String eventName, final JSONObject data) {
     if (cordova != null && webView != null) {
         cordova.getActivity().runOnUiThread(() -> {
-            final String js = String.format("cordova.fireWindowEvent('%s', %s);", eventName, data.toString());
-            webView.loadUrl("javascript:" + js);
+            try {
+                // Use proper event dispatching
+                final String js = String.format(
+                    "if (typeof cordova !== 'undefined' && cordova.fireWindowEvent) {" +
+                    "  cordova.fireWindowEvent('%s', %s);" +
+                    "} else {" +
+                    "  window.dispatchEvent(new CustomEvent('%s', { detail: %s }));" +
+                    "}", 
+                    eventName, data.toString(), eventName, data.toString()
+                );
+                webView.loadUrl("javascript:" + js);
+            } catch (Exception e) {
+                Log.e("DownloadManagerPlugin", "Error firing event: " + e.getMessage());
+            }
         });
     } else {
         Log.e("DownloadManagerPlugin", "webView or cordova is null, cannot fire event");
     }
 }
-
-
     protected boolean addCompletedDownload(JSONObject obj, CallbackContext callbackContext) throws JSONException {
 
         long id = downloadManager.addCompletedDownload(obj.optString("title"), obj.optString("description"),
